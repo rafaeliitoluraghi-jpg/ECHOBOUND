@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECHOBOUND</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #080b12;
+    font-family: Arial, sans-serif;
+}
+
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    image-rendering: pixelated;
+}
+
+/* HUD */
+
+#hud {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    color: white;
+    background: rgba(5, 8, 15, .75);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    padding: 12px 15px;
+    backdrop-filter: blur(8px);
+    z-index: 10;
+}
+
+#hud h1 {
+    font-size: 18px;
+    letter-spacing: 3px;
+}
+
+#hud p {
+    margin-top: 5px;
+    font-size: 12px;
+    opacity: .65;
+}
+
+/* CONTROLES MÓVILES */
+
+#controls {
+    position: fixed;
+    bottom: 25px;
+    left: 25px;
+    display: grid;
+    grid-template-columns: 55px 55px 55px;
+    grid-template-rows: 55px 55px;
+    gap: 6px;
+    z-index: 20;
+}
+
+.btn {
+    border: 1px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.08);
+    color: white;
+    border-radius: 14px;
+    font-size: 22px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.btn:active {
+    background: rgba(255,255,255,.2);
+}
+
+.up {
+    grid-column: 2;
+}
+
+.left {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.down {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.right {
+    grid-column: 3;
+    grid-row: 2;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+    <h1>ECHOBOUND</h1>
+    <p>THE FIRST ECHO · v0.1</p>
+    <p id="position">X: 0 · Y: 0</p>
+</div>
+
+<div id="controls">
+    <button class="btn up" data-key="up">▲</button>
+    <button class="btn left" data-key="left">◀</button>
+    <button class="btn down" data-key="down">▼</button>
+    <button class="btn right" data-key="right">▶</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+resize();
+window.addEventListener("resize", resize);
+
+/* =========================
+   JUGADOR
+========================= */
+
+const player = {
+    x: 0,
+    y: 0,
+    speed: 4,
+    size: 28
+};
+
+/* =========================
+   CONTROLES
+========================= */
+
+const keys = {
+    up: false,
+    down: false,
+    left: false,
+    right: false
+};
+
+window.addEventListener("keydown", e => {
+
+    if (e.key === "w" || e.key === "ArrowUp")
+        keys.up = true;
+
+    if (e.key === "s" || e.key === "ArrowDown")
+        keys.down = true;
+
+    if (e.key === "a" || e.key === "ArrowLeft")
+        keys.left = true;
+
+    if (e.key === "d" || e.key === "ArrowRight")
+        keys.right = true;
+});
+
+window.addEventListener("keyup", e => {
+
+    if (e.key === "w" || e.key === "ArrowUp")
+        keys.up = false;
+
+    if (e.key === "s" || e.key === "ArrowDown")
+        keys.down = false;
+
+    if (e.key === "a" || e.key === "ArrowLeft")
+        keys.left = false;
+
+    if (e.key === "d" || e.key === "ArrowRight")
+        keys.right = false;
+});
+
+/* CONTROLES TÁCTILES */
+
+document.querySelectorAll(".btn").forEach(btn => {
+
+    const key = btn.dataset.key;
+
+    const start = e => {
+        e.preventDefault();
+        keys[key] = true;
+    };
+
+    const stop = e => {
+        e.preventDefault();
+        keys[key] = false;
+    };
+
+    btn.addEventListener("touchstart", start);
+    btn.addEventListener("touchend", stop);
+    btn.addEventListener("touchcancel", stop);
+
+    btn.addEventListener("mousedown", start);
+    btn.addEventListener("mouseup", stop);
+    btn.addEventListener("mouseleave", stop);
+});
+
+/* =========================
+   MUNDO
+========================= */
+
+const TILE = 64;
+
+function drawWorld(cameraX, cameraY) {
+
+    ctx.fillStyle = "#18251d";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const startX = Math.floor(cameraX / TILE) - 2;
+    const startY = Math.floor(cameraY / TILE) - 2;
+
+    const endX = startX + Math.ceil(canvas.width / TILE) + 4;
+    const endY = startY + Math.ceil(canvas.height / TILE) + 4;
+
+    for (let y = startY; y < endY; y++) {
+
+        for (let x = startX; x < endX; x++) {
+
+            const screenX = x * TILE - cameraX;
+            const screenY = y * TILE - cameraY;
+
+            /* suelo */
+
+            ctx.fillStyle =
+                (x + y) % 2 === 0
+                ? "#1d2c22"
+                : "#203024";
+
+            ctx.fillRect(
+                screenX,
+                screenY,
+                TILE,
+                TILE
+            );
+
+            /* pequeñas marcas */
+
+            ctx.fillStyle = "rgba(255,255,255,.025)";
+
+            ctx.fillRect(
+                screenX + 15,
+                screenY + 20,
+                3,
+                3
+            );
+        }
+    }
+
+    /* árboles */
+
+    for (let y = startY; y < endY; y++) {
+
+        for (let x = startX; x < endX; x++) {
+
+            if ((x * 17 + y * 31) % 23 === 0) {
+
+                const tx = x * TILE - cameraX + 32;
+                const ty = y * TILE - cameraY + 32;
+
+                ctx.fillStyle = "#4a3022";
+                ctx.fillRect(tx - 5, ty, 10, 25);
+
+                ctx.beginPath();
+                ctx.arc(tx, ty - 5, 22, 0, Math.PI * 2);
+                ctx.fillStyle = "#315c38";
+                ctx.fill();
+            }
+        }
+    }
+}
+
+/* =========================
+   JUGADOR
+========================= */
+
+function drawPlayer() {
+
+    const x = canvas.width / 2;
+    const y = canvas.height / 2;
+
+    /* sombra */
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        x,
+        y + 18,
+        18,
+        7,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "rgba(0,0,0,.35)";
+    ctx.fill();
+
+    /* cuerpo */
+
+    ctx.fillStyle = "#e7edf5";
+
+    ctx.fillRect(
+        x - 13,
+        y - 8,
+        26,
+        28
+    );
+
+    /* cabeza */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y - 18,
+        14,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "#f0c7a0";
+    ctx.fill();
+
+    /* ojos */
+
+    ctx.fillStyle = "#111";
+
+    ctx.fillRect(x - 6, y - 20, 3, 3);
+    ctx.fillRect(x + 3, y - 20, 3, 3);
+}
+
+/* =========================
+   LOOP
+========================= */
+
+function update() {
+
+    if (keys.up)
+        player.y -= player.speed;
+
+    if (keys.down)
+        player.y += player.speed;
+
+    if (keys.left)
+        player.x -= player.speed;
+
+    if (keys.right)
+        player.x += player.speed;
+
+    document.getElementById("position").textContent =
+        `X: ${Math.round(player.x)} · Y: ${Math.round(player.y)}`;
+}
+
+function render() {
+
+    const cameraX =
+        player.x - canvas.width / 2;
+
+    const cameraY =
+        player.y - canvas.height / 2;
+
+    drawWorld(cameraX, cameraY);
+    drawPlayer();
+}
+
+function loop() {
+
+    update();
+    render();
+
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+  </html>
+
