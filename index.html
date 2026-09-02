@@ -1,392 +1,206 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ECHOBOUND</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECHOBOUND</title>
 
-<style>
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-html, body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #080b12;
-    font-family: Arial, sans-serif;
-}
+    body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      background: #080b12;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
 
-canvas {
-    display: block;
-    width: 100vw;
-    height: 100vh;
-    image-rendering: pixelated;
-}
+    #menu {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
 
-/* HUD */
+      background:
+        radial-gradient(circle at center, #182536 0%, #080b12 55%, #030509 100%);
+    }
 
-#hud {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    color: white;
-    background: rgba(5, 8, 15, .75);
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 12px;
-    padding: 12px 15px;
-    backdrop-filter: blur(8px);
-    z-index: 10;
-}
+    .container {
+      width: 90%;
+      max-width: 430px;
+    }
 
-#hud h1 {
-    font-size: 18px;
-    letter-spacing: 3px;
-}
+    .logo {
+      font-size: clamp(42px, 12vw, 72px);
+      font-weight: 900;
+      letter-spacing: 8px;
+      text-shadow: 0 0 30px rgba(150, 210, 255, 0.35);
+    }
 
-#hud p {
-    margin-top: 5px;
-    font-size: 12px;
-    opacity: .65;
-}
+    .subtitle {
+      margin-top: 8px;
+      font-size: 11px;
+      letter-spacing: 5px;
+      opacity: 0.45;
+    }
 
-/* CONTROLES MÓVILES */
+    .core {
+      width: 100px;
+      height: 100px;
+      margin: 40px auto;
 
-#controls {
-    position: fixed;
-    bottom: 25px;
-    left: 25px;
-    display: grid;
-    grid-template-columns: 55px 55px 55px;
-    grid-template-rows: 55px 55px;
-    gap: 6px;
-    z-index: 20;
-}
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
 
-.btn {
-    border: 1px solid rgba(255,255,255,.15);
-    background: rgba(255,255,255,.08);
-    color: white;
-    border-radius: 14px;
-    font-size: 22px;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: none;
-}
+      display: flex;
+      justify-content: center;
+      align-items: center;
 
-.btn:active {
-    background: rgba(255,255,255,.2);
-}
+      animation: pulse 3s infinite;
+    }
 
-.up {
-    grid-column: 2;
-}
+    .core::before {
+      content: "";
+      position: absolute;
+      width: 65px;
+      height: 65px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 50%;
+    }
 
-.left {
-    grid-column: 1;
-    grid-row: 2;
-}
+    .dot {
+      width: 9px;
+      height: 9px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 0 20px white;
+    }
 
-.down {
-    grid-column: 2;
-    grid-row: 2;
-}
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
 
-.right {
-    grid-column: 3;
-    grid-row: 2;
-}
-</style>
+    button {
+      padding: 17px;
+      border-radius: 12px;
+
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+
+      color: white;
+      font-size: 14px;
+      letter-spacing: 2px;
+
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: rgba(255,255,255,0.12);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .story {
+      border-color: rgba(180,220,255,0.3);
+    }
+
+    .online {
+      opacity: 0.65;
+    }
+
+    .version {
+      margin-top: 25px;
+      font-size: 9px;
+      letter-spacing: 3px;
+      opacity: 0.3;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+
+      50% {
+        transform: scale(1.08);
+        opacity: 1;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<canvas id="game"></canvas>
+  <div id="menu">
 
-<div id="hud">
-    <h1>ECHOBOUND</h1>
-    <p>THE FIRST ECHO · v0.1</p>
-    <p id="position">X: 0 · Y: 0</p>
-</div>
+    <div class="container">
 
-<div id="controls">
-    <button class="btn up" data-key="up">▲</button>
-    <button class="btn left" data-key="left">◀</button>
-    <button class="btn down" data-key="down">▼</button>
-    <button class="btn right" data-key="right">▶</button>
-</div>
+      <div class="logo">
+        ECHOBOUND
+      </div>
 
-<script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+      <div class="subtitle">
+        THE FIRST ECHO
+      </div>
 
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
+      <div class="core">
+        <div class="dot"></div>
+      </div>
 
-resize();
-window.addEventListener("resize", resize);
+      <div class="buttons">
 
-/* =========================
-   JUGADOR
-========================= */
+        <button class="story" onclick="story()">
+          📖 MODO HISTORIA
+        </button>
 
-const player = {
-    x: 0,
-    y: 0,
-    speed: 4,
-    size: 28
-};
+        <button class="online" onclick="online()">
+          🌎 MODO ONLINE
+        </button>
 
-/* =========================
-   CONTROLES
-========================= */
+        <button onclick="settings()">
+          ⚙️ AJUSTES
+        </button>
 
-const keys = {
-    up: false,
-    down: false,
-    left: false,
-    right: false
-};
+      </div>
 
-window.addEventListener("keydown", e => {
+      <div class="version">
+        ECHOBOUND v0.2.0
+      </div>
 
-    if (e.key === "w" || e.key === "ArrowUp")
-        keys.up = true;
+    </div>
 
-    if (e.key === "s" || e.key === "ArrowDown")
-        keys.down = true;
+  </div>
 
-    if (e.key === "a" || e.key === "ArrowLeft")
-        keys.left = true;
+  <script>
 
-    if (e.key === "d" || e.key === "ArrowRight")
-        keys.right = true;
-});
-
-window.addEventListener("keyup", e => {
-
-    if (e.key === "w" || e.key === "ArrowUp")
-        keys.up = false;
-
-    if (e.key === "s" || e.key === "ArrowDown")
-        keys.down = false;
-
-    if (e.key === "a" || e.key === "ArrowLeft")
-        keys.left = false;
-
-    if (e.key === "d" || e.key === "ArrowRight")
-        keys.right = false;
-});
-
-/* CONTROLES TÁCTILES */
-
-document.querySelectorAll(".btn").forEach(btn => {
-
-    const key = btn.dataset.key;
-
-    const start = e => {
-        e.preventDefault();
-        keys[key] = true;
-    };
-
-    const stop = e => {
-        e.preventDefault();
-        keys[key] = false;
-    };
-
-    btn.addEventListener("touchstart", start);
-    btn.addEventListener("touchend", stop);
-    btn.addEventListener("touchcancel", stop);
-
-    btn.addEventListener("mousedown", start);
-    btn.addEventListener("mouseup", stop);
-    btn.addEventListener("mouseleave", stop);
-});
-
-/* =========================
-   MUNDO
-========================= */
-
-const TILE = 64;
-
-function drawWorld(cameraX, cameraY) {
-
-    ctx.fillStyle = "#18251d";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const startX = Math.floor(cameraX / TILE) - 2;
-    const startY = Math.floor(cameraY / TILE) - 2;
-
-    const endX = startX + Math.ceil(canvas.width / TILE) + 4;
-    const endY = startY + Math.ceil(canvas.height / TILE) + 4;
-
-    for (let y = startY; y < endY; y++) {
-
-        for (let x = startX; x < endX; x++) {
-
-            const screenX = x * TILE - cameraX;
-            const screenY = y * TILE - cameraY;
-
-            /* suelo */
-
-            ctx.fillStyle =
-                (x + y) % 2 === 0
-                ? "#1d2c22"
-                : "#203024";
-
-            ctx.fillRect(
-                screenX,
-                screenY,
-                TILE,
-                TILE
-            );
-
-            /* pequeñas marcas */
-
-            ctx.fillStyle = "rgba(255,255,255,.025)";
-
-            ctx.fillRect(
-                screenX + 15,
-                screenY + 20,
-                3,
-                3
-            );
-        }
+    function story() {
+      alert("📖 MODO HISTORIA\n\nPróximamente comienza tu aventura...");
     }
 
-    /* árboles */
-
-    for (let y = startY; y < endY; y++) {
-
-        for (let x = startX; x < endX; x++) {
-
-            if ((x * 17 + y * 31) % 23 === 0) {
-
-                const tx = x * TILE - cameraX + 32;
-                const ty = y * TILE - cameraY + 32;
-
-                ctx.fillStyle = "#4a3022";
-                ctx.fillRect(tx - 5, ty, 10, 25);
-
-                ctx.beginPath();
-                ctx.arc(tx, ty - 5, 22, 0, Math.PI * 2);
-                ctx.fillStyle = "#315c38";
-                ctx.fill();
-            }
-        }
+    function online() {
+      alert("🌎 MODO ONLINE\n\nEl mundo multiplayer está en desarrollo.");
     }
-}
 
-/* =========================
-   JUGADOR
-========================= */
+    function settings() {
+      alert("⚙️ AJUSTES\n\nPersonalización próximamente.");
+    }
 
-function drawPlayer() {
-
-    const x = canvas.width / 2;
-    const y = canvas.height / 2;
-
-    /* sombra */
-
-    ctx.beginPath();
-
-    ctx.ellipse(
-        x,
-        y + 18,
-        18,
-        7,
-        0,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.fillStyle = "rgba(0,0,0,.35)";
-    ctx.fill();
-
-    /* cuerpo */
-
-    ctx.fillStyle = "#e7edf5";
-
-    ctx.fillRect(
-        x - 13,
-        y - 8,
-        26,
-        28
-    );
-
-    /* cabeza */
-
-    ctx.beginPath();
-
-    ctx.arc(
-        x,
-        y - 18,
-        14,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.fillStyle = "#f0c7a0";
-    ctx.fill();
-
-    /* ojos */
-
-    ctx.fillStyle = "#111";
-
-    ctx.fillRect(x - 6, y - 20, 3, 3);
-    ctx.fillRect(x + 3, y - 20, 3, 3);
-}
-
-/* =========================
-   LOOP
-========================= */
-
-function update() {
-
-    if (keys.up)
-        player.y -= player.speed;
-
-    if (keys.down)
-        player.y += player.speed;
-
-    if (keys.left)
-        player.x -= player.speed;
-
-    if (keys.right)
-        player.x += player.speed;
-
-    document.getElementById("position").textContent =
-        `X: ${Math.round(player.x)} · Y: ${Math.round(player.y)}`;
-}
-
-function render() {
-
-    const cameraX =
-        player.x - canvas.width / 2;
-
-    const cameraY =
-        player.y - canvas.height / 2;
-
-    drawWorld(cameraX, cameraY);
-    drawPlayer();
-}
-
-function loop() {
-
-    update();
-    render();
-
-    requestAnimationFrame(loop);
-}
-
-loop();
-</script>
+  </script>
 
 </body>
-  </html>
+</html>
 
